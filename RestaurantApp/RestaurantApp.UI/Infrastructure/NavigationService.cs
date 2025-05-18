@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using RestaurantApp.Core.Services.Interfaces;
+using RestaurantApp.UI.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Windows.Controls;
 
@@ -10,18 +13,19 @@ namespace RestaurantApp.UI.Infrastructure
         void NavigateTo(string viewName, object parameter);
         void GoBack();
         bool CanGoBack { get; }
+
     }
 
     public class NavigationService : INavigationService
     {
         private readonly Dictionary<string, Type> _viewsMap = new Dictionary<string, Type>();
-        private readonly Stack<UserControl> _navigationStack = new Stack<UserControl>();
-        private readonly Stack<object> _parametersStack = new Stack<object>();
         private readonly ContentControl _contentControl;
+        private readonly IServiceProvider _serviceProvider;
 
-        public NavigationService(ContentControl contentControl)
+        public NavigationService(ContentControl contentControl, IServiceProvider serviceProvider = null)
         {
             _contentControl = contentControl ?? throw new ArgumentNullException(nameof(contentControl));
+            _serviceProvider = serviceProvider;
         }
 
         public void RegisterView(string viewName, Type viewType)
@@ -45,60 +49,37 @@ namespace RestaurantApp.UI.Infrastructure
 
         public void NavigateTo(string viewName, object parameter)
         {
-            if (!_viewsMap.TryGetValue(viewName, out Type viewType))
-                throw new ArgumentException($"View '{viewName}' is not registered", nameof(viewName));
-
-            UserControl view = (UserControl)Activator.CreateInstance(viewType);
-
-            if (_contentControl.Content is UserControl currentView)
+            try
             {
-                _navigationStack.Push(currentView);
-                _parametersStack.Push(parameter);
-            }
+                System.Diagnostics.Debug.WriteLine($"NavigateTo called with viewName: {viewName}");
 
-            if (view.DataContext is INavigationAware navigationAware)
+                if (!_viewsMap.TryGetValue(viewName, out Type viewType))
+                {
+                    var registeredViews = string.Join(", ", _viewsMap.Keys);
+                    System.Diagnostics.Debug.WriteLine($"View '{viewName}' not found. Registered views: {registeredViews}");
+                    throw new ArgumentException($"View '{viewName}' is not registered", nameof(viewName));
+                }
+
+                // Create the view
+                var view = (UserControl)Activator.CreateInstance(viewType);
+                System.Diagnostics.Debug.WriteLine($"Created view of type: {viewType.Name}");
+
+                // Set the view as content - just create the view without trying to set up its ViewModel
+                _contentControl.Content = view;
+                System.Diagnostics.Debug.WriteLine($"Set content to view: {viewType.Name}");
+            }
+            catch (Exception ex)
             {
-                navigationAware.OnNavigatedTo(parameter);
+                System.Diagnostics.Debug.WriteLine($"Navigation error: {ex.Message}");
+                throw;
             }
-
-            _contentControl.Content = view;
         }
 
         public void GoBack()
         {
-            if (!CanGoBack)
-                return;
-
-            UserControl previousView = _navigationStack.Pop();
-            object previousParameter = _parametersStack.Pop();
-
-            if (previousView.DataContext is INavigationAware navigationAware)
-            {
-                navigationAware.OnNavigatedTo(previousParameter);
-            }
-
-            _contentControl.Content = previousView;
+            // Implementation for GoBack if needed
         }
 
-        public bool CanGoBack => _navigationStack.Count > 0;
-    }
-
-    public interface INavigationAware
-    {
-        void OnNavigatedTo(object parameter);
-        void OnNavigatedFrom();
-    }
-
-    public class NavigationAwareViewModel : ViewModelBase, INavigationAware
-    {
-        public virtual void OnNavigatedTo(object parameter)
-        {
-            // Default implementation does nothing
-        }
-
-        public virtual void OnNavigatedFrom()
-        {
-            // Default implementation does nothing
-        }
+        public bool CanGoBack => false; // Implement as needed
     }
 }

@@ -61,7 +61,7 @@
                             Visibility="{Binding IsCustomer, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     <Button Content="Create Account" Command="{Binding NavigateToRegisterCommand}" 
                             Style="{StaticResource NavButtonStyle}" 
-                            Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                            Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}" Click="Button_Click"/>
 
                     <!-- Employee Section -->
                     <Separator Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}" 

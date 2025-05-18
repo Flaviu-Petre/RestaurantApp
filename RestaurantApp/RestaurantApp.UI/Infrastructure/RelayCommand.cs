@@ -27,7 +27,16 @@ namespace RestaurantApp.UI.Infrastructure
 
         public void Execute(object parameter)
         {
-            _execute();
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("RelayCommand.Execute called");
+                _execute();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in RelayCommand.Execute: {ex.Message}");
+                throw; // Re-throw to allow caller to handle
+            }
         }
 
         public void RaiseCanExecuteChanged()

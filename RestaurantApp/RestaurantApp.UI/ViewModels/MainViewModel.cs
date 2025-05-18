@@ -43,6 +43,7 @@ namespace RestaurantApp.UI.ViewModels
             NavigateToMenu();
         }
 
+
         // Session properties
         public bool IsLoggedIn => _userSessionService.IsLoggedIn;
         public bool IsCustomer => _userSessionService.IsCustomer;
@@ -116,8 +117,20 @@ namespace RestaurantApp.UI.ViewModels
 
         private void NavigateToRegister()
         {
-            _navigationService.NavigateTo("RegisterView");
-            StatusMessage = "Create a new account";
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("NavigateToRegister called");
+                // Simple version - just try to create the view directly
+                var registerView = new RestaurantApp.UI.Views.RegisterView();
+                _navigationService.NavigateTo("RegisterView");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in NavigateToRegister: {ex.Message}");
+                // Consider showing a message box to display the error
+                System.Windows.MessageBox.Show($"Navigation error: {ex.Message}", "Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
         }
 
         private void NavigateToCategories()
