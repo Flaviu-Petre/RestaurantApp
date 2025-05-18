@@ -1,0 +1,114 @@
+﻿<Window x:Class="RestaurantApp.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RestaurantApp.UI"
+        xmlns:views="clr-namespace:RestaurantApp.UI.Views"
+        mc:Ignorable="d"
+        Title="Restaurant Management System" Height="720" Width="1280" 
+        WindowStartupLocation="CenterScreen">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Navigation Bar -->
+        <Border Grid.Row="0" Background="#FF3F51B5" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="Restaurant Management" 
+                           FontSize="20" FontWeight="Bold" Foreground="White" 
+                           VerticalAlignment="Center" Margin="10,0,0,0"/>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <!-- User Info and Login/Logout -->
+                    <TextBlock Text="{Binding WelcomeMessage}" Foreground="White" 
+                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <Button Content="{Binding LoginButtonText}" Command="{Binding LoginCommand}" 
+                            Padding="10,5" Margin="5,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content Area with Navigation -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Navigation Menu -->
+            <Border Grid.Column="0" Background="#FFF3F3F3" Width="200">
+                <StackPanel>
+                    <Button Content="Menu" Command="{Binding NavigateToMenuCommand}" 
+                            Style="{StaticResource NavButtonStyle}"/>
+                    <Button Content="Search" Command="{Binding NavigateToSearchCommand}" 
+                            Style="{StaticResource NavButtonStyle}"/>
+                    <Button Content="My Orders" Command="{Binding NavigateToOrdersCommand}"
+                            Style="{StaticResource NavButtonStyle}" 
+                            Visibility="{Binding IsCustomer, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="Cart" Command="{Binding NavigateToCartCommand}"
+                            Style="{StaticResource NavButtonStyle}" 
+                            Visibility="{Binding IsCustomer, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="Create Account" Command="{Binding NavigateToRegisterCommand}" 
+                            Style="{StaticResource NavButtonStyle}" 
+                            Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+
+                    <!-- Employee Section -->
+                    <Separator Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}" 
+                              Margin="10"/>
+                    <TextBlock Text="Administration" FontWeight="Bold" Margin="10" 
+                               Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="Manage Categories" Command="{Binding NavigateToCategoriesCommand}" 
+                            Style="{StaticResource NavButtonStyle}"
+                            Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="Manage Dishes" Command="{Binding NavigateToDishesCommand}" 
+                            Style="{StaticResource NavButtonStyle}"
+                            Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="Manage Menus" Command="{Binding NavigateToMenusCommand}" 
+                            Style="{StaticResource NavButtonStyle}"
+                            Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="Manage Allergens" Command="{Binding NavigateToAllergensCommand}" 
+                            Style="{StaticResource NavButtonStyle}"
+                            Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="All Orders" Command="{Binding NavigateToAllOrdersCommand}" 
+                            Style="{StaticResource NavButtonStyle}"
+                            Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <Button Content="Low Stock" Command="{Binding NavigateToLowStockCommand}" 
+                            Style="{StaticResource NavButtonStyle}"
+                            Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Main Content -->
+            <Border Grid.Column="1" Background="White" Padding="20">
+                <ContentControl x:Name="MainContent" Grid.Row="1" Grid.Column="1" />
+            </Border>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="#FFE0E0E0" Padding="10">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="#FF444444"/>
+        </Border>
+
+        <!-- Loading Overlay -->
+        <Grid Grid.RowSpan="3" Background="#80000000" 
+              Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Loading..." Foreground="White" FontSize="18" 
+                           HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <ProgressBar IsIndeterminate="True" Width="200" Height="10"/>
+            </StackPanel>
+        </Grid>
+        
+    </Grid>
+</Window>
