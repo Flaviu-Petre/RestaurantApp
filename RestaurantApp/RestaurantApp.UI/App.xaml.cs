@@ -90,6 +90,7 @@ namespace RestaurantApp.UI
                 navigationService.RegisterView("LowStockView", typeof(LowStockView));
                 navigationService.RegisterView("AllOrdersView", typeof(ManageOrdersView));
                 navigationService.RegisterView("AllergensView", typeof(AllergensView));
+                navigationService.RegisterView("SearchView", typeof(SearchView));
 
                 // Register the NavigationService as a singleton
                 services.AddSingleton<INavigationService>(navigationService);

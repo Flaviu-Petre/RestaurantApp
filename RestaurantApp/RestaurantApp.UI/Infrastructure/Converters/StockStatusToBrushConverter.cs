@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace RestaurantApp.UI.Converters
+namespace RestaurantApp.UI.Infrastructure.Converters
 {
     public class StockStatusToBrushConverter : IValueConverter
     {
