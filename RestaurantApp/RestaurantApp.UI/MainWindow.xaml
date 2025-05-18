@@ -95,20 +95,5 @@
             </Border>
         </Grid>
 
-        <!-- Status Bar -->
-        <Border Grid.Row="2" Background="#FFE0E0E0" Padding="10">
-            <TextBlock Text="{Binding StatusMessage}" Foreground="#FF444444"/>
-        </Border>
-
-        <!-- Loading Overlay -->
-        <Grid Grid.RowSpan="3" Background="#80000000" 
-              Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock Text="Loading..." Foreground="White" FontSize="18" 
-                           HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                <ProgressBar IsIndeterminate="True" Width="200" Height="10"/>
-            </StackPanel>
-        </Grid>
-        
     </Grid>
 </Window>

@@ -1,0 +1,139 @@
+﻿<UserControl x:Class="RestaurantApp.UI.Views.CartView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:RestaurantApp.UI.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Your Cart" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+
+        <!-- Cart Items List -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding CartItems}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="0,0,0,10" BorderBrush="#FFDDDDDD" BorderThickness="0,0,0,1" Padding="0,0,0,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <!-- Image -->
+                                <Border Grid.Column="0" Width="60" Height="60" Background="#FFF0F0F0" 
+                                        CornerRadius="5" Margin="0,0,10,0">
+                                    <Image Source="{Binding ImageUrl}" Stretch="Uniform" Margin="5"/>
+                                </Border>
+                                
+                                <!-- Item Details -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding IsMenu, Converter={StaticResource BoolToStringConverter}, 
+                                                   ConverterParameter='Menu|Dish'}" 
+                                               Opacity="0.7" FontSize="12"/>
+                                </StackPanel>
+                                
+                                <!-- Quantity Controls -->
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
+                                    <Button Content="-" Command="{Binding DataContext.DecreaseQuantityCommand, 
+                                            RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                            CommandParameter="{Binding}"
+                                            Width="30" Height="30"/>
+                                    <TextBlock Text="{Binding Quantity}" VerticalAlignment="Center" 
+                                               HorizontalAlignment="Center" MinWidth="30" TextAlignment="Center"/>
+                                    <Button Content="+" Command="{Binding DataContext.IncreaseQuantityCommand, 
+                                            RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                            CommandParameter="{Binding}"
+                                            Width="30" Height="30"/>
+                                </StackPanel>
+                                
+                                <!-- Price -->
+                                <TextBlock Grid.Column="3" Text="{Binding TotalPrice, StringFormat={}{0}g}" 
+                                           FontWeight="SemiBold" VerticalAlignment="Center" 
+                                           MinWidth="80" TextAlignment="Right" Margin="10,0"/>
+                                
+                                <!-- Remove Button -->
+                                <Button Grid.Column="4" Content="Remove" Command="{Binding DataContext.RemoveFromCartCommand, 
+                                        RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                        CommandParameter="{Binding}"
+                                        Padding="10,5" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+        
+        <!-- Empty Cart Message -->
+        <TextBlock Grid.Row="1" Text="Your cart is empty." HorizontalAlignment="Center" 
+                   VerticalAlignment="Center" FontSize="16" Opacity="0.7"
+                   Visibility="{Binding IsCartEmpty, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        
+        <!-- Order Summary -->
+        <Grid Grid.Row="2" Visibility="{Binding IsCartEmpty, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <!-- Summary -->
+            <Border Grid.Row="0" BorderBrush="#FFDDDDDD" BorderThickness="0,1,0,0" Padding="0,20,0,20">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Subtotal -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Subtotal:" HorizontalAlignment="Right"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Subtotal, StringFormat={}{0}g}" 
+                               HorizontalAlignment="Right" MinWidth="100" Margin="20,0,0,0"/>
+                    
+                    <!-- Shipping -->
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Shipping:" HorizontalAlignment="Right" Margin="0,5,0,0"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ShippingCost, StringFormat={}{0}g}" 
+                               HorizontalAlignment="Right" MinWidth="100" Margin="20,5,0,0"/>
+                    
+                    <!-- Discount -->
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Discount:" HorizontalAlignment="Right" Margin="0,5,0,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Discount, StringFormat='-{0:C}'}" 
+                               HorizontalAlignment="Right" MinWidth="100" Margin="20,5,0,0" Foreground="Green"
+                               Visibility="{Binding HasDiscount, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="$0.00" 
+                               HorizontalAlignment="Right" MinWidth="100" Margin="20,5,0,0"
+                               Visibility="{Binding HasDiscount, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+                    
+                    <!-- Total -->
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Total:" FontWeight="Bold" 
+                               HorizontalAlignment="Right" Margin="0,10,0,0"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Total, StringFormat={}{0}g}" 
+                               FontWeight="Bold" HorizontalAlignment="Right" 
+                               MinWidth="100" Margin="20,10,0,0"/>
+                </Grid>
+            </Border>
+            
+            <!-- Checkout Button -->
+            <Button Grid.Row="1" Content="Proceed to Checkout" Command="{Binding CheckoutCommand}" 
+                    HorizontalAlignment="Right" Padding="20,10" Margin="0,10,0,0"
+                    Background="#FF3F51B5" Foreground="White" BorderThickness="0"
+                    FontWeight="SemiBold"/>
+        </Grid>
+    </Grid>
+</UserControl>

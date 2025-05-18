@@ -5,6 +5,7 @@ using RestaurantApp.Data;
 using RestaurantApp.Data.Repositories.Implementations;
 using RestaurantApp.Core.Interfaces.Repositories;
 using RestaurantApp.UI.Infrastructure;
+using RestaurantApp.UI.ViewModels;
 using System;
 using System.Windows;
 using Microsoft.Extensions.Configuration;
@@ -78,8 +79,8 @@ namespace RestaurantApp.UI
             services.AddSingleton<IUserSessionService, UserSessionService>();
             services.AddSingleton<IMessageBus, MessageBus>();
 
-            // Register ViewModels
-            //services.AddTransient<MainViewModel>();
+            //Register ViewModels
+            services.AddTransient<MainViewModel>();
 
             // Register MainWindow
             services.AddTransient<MainWindow>();

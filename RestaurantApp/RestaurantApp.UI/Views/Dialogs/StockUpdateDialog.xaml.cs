@@ -1,5 +1,8 @@
-﻿using RestaurantApp.UI.Views;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,14 +13,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace RestaurantApp.UI
+namespace RestaurantApp.UI.Views.Dialogs
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Interaction logic for StockUpdateDialog.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class StockUpdateDialog : Window
     {
-        public MainWindow()
+        public StockUpdateDialog()
         {
             InitializeComponent();
         }

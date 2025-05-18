@@ -1,0 +1,126 @@
+﻿<UserControl x:Class="RestaurantApp.UI.Views.SearchView"
+            xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+            xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+            xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+            xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+            xmlns:local="clr-namespace:RestaurantApp.UI.Views"
+            mc:Ignorable="d" 
+            d:DesignHeight="600" d:DesignWidth="800">
+   <Grid>
+       <Grid.RowDefinitions>
+           <RowDefinition Height="Auto"/>
+           <RowDefinition Height="Auto"/>
+           <RowDefinition Height="*"/>
+       </Grid.RowDefinitions>
+
+       <!-- Header -->
+       <TextBlock Grid.Row="0" Text="Search Menu" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+
+       <!-- Search Controls -->
+       <Grid Grid.Row="1" Margin="0,0,0,20">
+           <Grid.ColumnDefinitions>
+               <ColumnDefinition Width="*"/>
+               <ColumnDefinition Width="Auto"/>
+               <ColumnDefinition Width="Auto"/>
+           </Grid.ColumnDefinitions>
+
+           <Grid.RowDefinitions>
+               <RowDefinition Height="Auto"/>
+               <RowDefinition Height="Auto"/>
+           </Grid.RowDefinitions>
+
+           <!-- Name Search -->
+           <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding SearchTerm, UpdateSourceTrigger=PropertyChanged}" 
+                    Padding="10" Margin="0,0,10,0" ToolTip="Search by name..."/>
+           <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding SearchTypes}" 
+                     SelectedItem="{Binding SelectedSearchType}" Width="150" Margin="0,0,10,0"/>
+           <Button Grid.Row="0" Grid.Column="2" Content="Search" Command="{Binding SearchCommand}" 
+                   Padding="15,8" MinWidth="100"/>
+
+           <!-- Allergen Filter -->
+           <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Orientation="Horizontal" Margin="0,10,0,0">
+               <TextBlock Text="Filter by allergen:" VerticalAlignment="Center" Margin="0,0,10,0"/>
+               <ComboBox ItemsSource="{Binding Allergens}" DisplayMemberPath="Name" 
+                         SelectedItem="{Binding SelectedAllergen}" Width="150" Margin="0,0,10,0"/>
+               <RadioButton Content="Contains" IsChecked="{Binding IncludeAllergen}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+               <RadioButton Content="Does not contain" IsChecked="{Binding IncludeAllergen, Converter={StaticResource InverseBooleanConverter}}" 
+                            VerticalAlignment="Center"/>
+               <Button Content="Apply Filter" Command="{Binding ApplyAllergenFilterCommand}" 
+                       Padding="10,5" Margin="10,0,0,0"/>
+               <Button Content="Clear Filter" Command="{Binding ClearFiltersCommand}" 
+                       Padding="10,5" Margin="10,0,0,0"/>
+           </StackPanel>
+       </Grid>
+
+       <!-- Search Results -->
+       <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+           <ItemsControl ItemsSource="{Binding SearchResults}">
+               <ItemsControl.GroupStyle>
+                   <GroupStyle>
+                       <GroupStyle.HeaderTemplate>
+                           <DataTemplate>
+                               <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="18" 
+                                          Margin="0,20,0,10" Foreground="#FF3F51B5"/>
+                           </DataTemplate>
+                       </GroupStyle.HeaderTemplate>
+                   </GroupStyle>
+               </ItemsControl.GroupStyle>
+               <ItemsControl.ItemTemplate>
+                   <DataTemplate>
+                       <Border Margin="5" BorderBrush="#FFDDDDDD" BorderThickness="1" CornerRadius="5">
+                           <Grid Margin="10">
+                               <Grid.ColumnDefinitions>
+                                   <ColumnDefinition Width="100"/>
+                                   <ColumnDefinition Width="*"/>
+                                   <ColumnDefinition Width="Auto"/>
+                               </Grid.ColumnDefinitions>
+
+                               <!-- Image -->
+                               <Border Grid.Column="0" Width="80" Height="80" Background="#FFF0F0F0" 
+                                       CornerRadius="5" Margin="0,0,10,0">
+                                   <Image Source="{Binding ImageUrl}" Stretch="Uniform" Margin="5"/>
+                               </Border>
+
+                               <!-- Item Details -->
+                               <StackPanel Grid.Column="1">
+                                   <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="16"/>
+                                   <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                       <TextBlock Text="Portion:" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding PortionQuantity, StringFormat={}{0}g}" Margin="5,0,0,0"/>
+                                    </StackPanel>
+                                   <StackPanel Orientation="Horizontal" Margin="0,5,0,0" 
+                                               Visibility="{Binding HasAllergens, Converter={StaticResource BoolToVisibilityConverter}}">
+                                       <TextBlock Text="Allergens:" FontWeight="SemiBold"/>
+                                       <TextBlock Text="{Binding AllergensList}" Margin="5,0,0,0"/>
+                                   </StackPanel>
+                                   <TextBlock Text="Currently unavailable" Foreground="Red" FontWeight="Bold" 
+                                              Visibility="{Binding IsAvailable, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"
+                                              Margin="0,5,0,0"/>
+                               </StackPanel>
+
+                               <!-- Price and Order Button -->
+                               <StackPanel Grid.Column="2" MinWidth="100">
+                                    <TextBlock Text="{Binding Price, StringFormat={}{0}g}" FontWeight="Bold" 
+                                              FontSize="16" HorizontalAlignment="Right"/>
+                                   <Button Content="Add to Cart" Command="{Binding DataContext.AddToCartCommand, 
+                                           RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                           CommandParameter="{Binding}"
+                                           Margin="0,10,0,0" Padding="10,5"
+                                           Visibility="{Binding DataContext.IsCustomer, 
+                                               RelativeSource={RelativeSource AncestorType={x:Type UserControl}}, 
+                                               Converter={StaticResource BoolToVisibilityConverter}}"
+                                           IsEnabled="{Binding IsAvailable}"/>
+                               </StackPanel>
+                           </Grid>
+                       </Border>
+                   </DataTemplate>
+               </ItemsControl.ItemTemplate>
+           </ItemsControl>
+       </ScrollViewer>
+
+       <!-- No results message -->
+       <TextBlock Grid.Row="2" Text="No results found. Try different search criteria." 
+                  HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16"
+                  Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
+   </Grid>
+</UserControl>
