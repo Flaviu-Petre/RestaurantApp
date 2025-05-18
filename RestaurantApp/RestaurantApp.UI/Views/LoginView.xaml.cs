@@ -1,28 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Windows.Controls;
+using RestaurantApp.UI.ViewModels;
+using RestaurantApp.Core.Services.Interfaces;
+using RestaurantApp.UI.Infrastructure;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RestaurantApp.UI.Views
 {
-    /// <summary>
-    /// Interaction logic for LoginView.xaml
-    /// </summary>
     public partial class LoginView : UserControl
     {
         public LoginView()
         {
             InitializeComponent();
+
+            // Get required services from App.ServiceProvider
+            var authService = App.ServiceProvider.GetService<IAuthenticationService>();
+            var userService = App.ServiceProvider.GetService<IUserService>();
+            var userSessionService = App.ServiceProvider.GetService<IUserSessionService>();
+            var navigationService = App.ServiceProvider.GetService<INavigationService>();
+            var dialogService = App.ServiceProvider.GetService<IDialogService>();
+
+            // Create and set ViewModel
+            if (authService != null && userService != null && userSessionService != null &&
+                navigationService != null && dialogService != null)
+            {
+                DataContext = new LoginViewModel(
+                    authService,
+                    userService,
+                    userSessionService,
+                    navigationService,
+                    dialogService);
+            }
+            else
+            {
+                MessageBox.Show("Failed to initialize LoginView: Required services not available.",
+                    "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

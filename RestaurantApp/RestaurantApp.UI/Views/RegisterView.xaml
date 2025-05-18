@@ -57,6 +57,9 @@
                     <PasswordBox Padding="10,8" Margin="0,0,0,20"
                                  behaviors:PasswordBehavior.Password="{Binding ConfirmPassword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
+                    <CheckBox Content="Create as Employee Account" IsChecked="{Binding IsEmployee}" 
+                        Margin="0,0,0,15"/>
+                    
                     <!-- Register Button -->
                     <Button Content="Create Account" Command="{Binding RegisterCommand}" 
                             Padding="20,10" Margin="0,0,0,15"

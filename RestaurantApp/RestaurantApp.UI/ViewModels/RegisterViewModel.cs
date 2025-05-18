@@ -83,6 +83,13 @@ namespace RestaurantApp.UI.ViewModels
             set => SetProperty(ref _hasError, value);
         }
 
+        private bool _isEmployee;
+        public bool IsEmployee
+        {
+            get => _isEmployee;
+            set => SetProperty(ref _isEmployee, value);
+        }
+
         // Commands
         public ICommand RegisterCommand { get; }
         public ICommand NavigateToLoginCommand { get; }
@@ -163,7 +170,7 @@ namespace RestaurantApp.UI.ViewModels
                     Email = Email,
                     PhoneNumber = PhoneNumber,
                     DeliveryAddress = Address,
-                    Role = UserRole.Customer // Default role for new registrations
+                    Role = IsEmployee ? UserRole.Employee : UserRole.Customer
                 };
 
                 var createdUser = await _userService.CreateUserAsync(user, Password);
