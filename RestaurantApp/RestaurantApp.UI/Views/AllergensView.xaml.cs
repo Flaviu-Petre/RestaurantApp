@@ -7,25 +7,25 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace RestaurantApp.UI.Views.Admin
 {
-    public partial class CategoriesView : UserControl
+    public partial class AllergensView : UserControl
     {
-        public CategoriesView()
+        public AllergensView()
         {
             InitializeComponent();
 
             // Get required services
-            var categoryService = App.ServiceProvider.GetService<ICategoryService>();
+            var allergenService = App.ServiceProvider.GetService<IAllergenService>();
             var dialogService = App.ServiceProvider.GetService<IDialogService>();
             var messageBus = App.ServiceProvider.GetService<IMessageBus>();
 
             // Create and set ViewModel
-            if (categoryService != null && dialogService != null && messageBus != null)
+            if (allergenService != null && dialogService != null && messageBus != null)
             {
-                DataContext = new CategoryManagementViewModel(categoryService, dialogService, messageBus);
+                DataContext = new AllergenManagementViewModel(allergenService, dialogService, messageBus);
             }
             else
             {
-                MessageBox.Show("Failed to initialize CategoriesView: Required services not available.",
+                MessageBox.Show("Failed to initialize AllergensView: Required services not available.",
                     "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
