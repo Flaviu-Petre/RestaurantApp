@@ -279,8 +279,13 @@ namespace RestaurantApp.UI.ViewModels
                 Id = m.Id,
                 Name = m.Name,
                 Description = m.Description ?? "Delicious menu", // Default if null
-                Price = CalculateMenuPrice(m),
-                PortionQuantity = 0, // Menu doesn't have a single portion quantity
+
+                // Show price WITHOUT discount - just sum the dish prices
+                Price = CalculateMenuPriceWithoutDiscount(m),
+
+                // Calculate and show the correct portion quantity
+                PortionQuantity = CalculateMenuPortionQuantity(m),
+
                 CategoryId = m.CategoryId,
                 ImageUrl = "/Images/default-menu.png", // Default menu image
                 AllergensList = GetMenuAllergensList(m),
@@ -288,6 +293,94 @@ namespace RestaurantApp.UI.ViewModels
                 IsAvailable = IsMenuAvailable(m),
                 IsMenu = true // Indicate this is a menu, not a dish
             }).ToList<MenuItemViewModel>();
+        }
+
+        // New method to calculate menu price WITHOUT applying discount
+        private decimal CalculateMenuPriceWithoutDiscount(Menu menu)
+        {
+            // If menu dishes are loaded, sum up their prices
+            if (menu.MenuDishes != null && menu.MenuDishes.Any())
+            {
+                return menu.MenuDishes.Sum(md => md.Dish?.Price ?? 0);
+            }
+
+            // If dishes aren't loaded, try to load and calculate
+            try
+            {
+                // Load menu with dishes
+                var menuTask = Task.Run(async () => await _menuService.GetMenuWithDetailsAsync(menu.Id));
+                menuTask.Wait();
+                var menuWithDishes = menuTask.Result;
+
+                if (menuWithDishes?.MenuDishes != null && menuWithDishes.MenuDishes.Any())
+                {
+                    // Calculate the sum of dish prices without applying discount
+                    return menuWithDishes.MenuDishes.Sum(md => md.Dish?.Price ?? 0);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error calculating non-discounted menu price: {ex.Message}");
+            }
+
+            // Default to zero if calculation fails
+            return 0;
+        }
+
+        // New method to calculate menu portion quantity
+        private decimal CalculateMenuPortionQuantity(Menu menu)
+        {
+            decimal totalPortionQuantity = 0;
+
+            // If menu dishes are loaded, sum up portion quantities
+            if (menu.MenuDishes != null && menu.MenuDishes.Any())
+            {
+                foreach (var menuDish in menu.MenuDishes)
+                {
+                    if (menuDish.Dish != null)
+                    {
+                        // Add each dish's portion quantity
+                        totalPortionQuantity += menuDish.Dish.PortionQuantity;
+                    }
+                }
+            }
+            else
+            {
+                // If dishes aren't loaded, try to load and calculate
+                try
+                {
+                    // Load menu with dishes
+                    var menuTask = Task.Run(async () => await _menuService.GetMenuWithDetailsAsync(menu.Id));
+                    menuTask.Wait();
+                    var menuWithDishes = menuTask.Result;
+
+                    if (menuWithDishes?.MenuDishes != null && menuWithDishes.MenuDishes.Any())
+                    {
+                        // Calculate the sum of dish portion quantities
+                        foreach (var menuDish in menuWithDishes.MenuDishes)
+                        {
+                            if (menuDish.Dish != null)
+                            {
+                                totalPortionQuantity += menuDish.Dish.PortionQuantity;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // If loading fails, use a reasonable default
+                        totalPortionQuantity = 200;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error calculating menu portion: {ex.Message}");
+                    // Use a default value
+                    totalPortionQuantity = 200;
+                }
+            }
+
+            // Round to a whole number
+            return Math.Round(totalPortionQuantity);
         }
 
         private string GetDishImageUrl(Dish dish)
@@ -308,11 +401,6 @@ namespace RestaurantApp.UI.ViewModels
             return string.Join(", ", dish.DishAllergens
                 .Where(da => da.Allergen != null)
                 .Select(da => da.Allergen.Name));
-        }
-
-        private decimal CalculateMenuPrice(Menu menu)
-        {
-            return menu.CalculatePrice(10); // 10% discount placeholder
         }
 
         private string GetMenuAllergensList(Menu menu)
@@ -340,13 +428,28 @@ namespace RestaurantApp.UI.ViewModels
             return menu.MenuDishes?.All(md => md.Dish?.TotalQuantity > 0) ?? false;
         }
 
+        // Fix the AddToCart method in SearchViewModel.cs
         private void AddToCart(MenuItemViewModel item)
         {
-            if (item == null || !_userSessionService.IsLoggedIn || !IsCustomer)
+            if (item == null || !_userSessionService.IsLoggedIn || !_userSessionService.IsCustomer)
+            {
+                if (!_userSessionService.IsLoggedIn)
+                {
+                    _dialogService.ShowMessage("You need to be logged in to add items to cart",
+                        "Login Required", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                }
                 return;
+            }
 
             try
             {
+                if (!item.IsAvailable)
+                {
+                    _dialogService.ShowMessage("This item is currently not available",
+                        "Unavailable", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
                 if (!item.IsMenu) // It's a dish
                 {
                     _cartService.AddDish(item.Id, 1);

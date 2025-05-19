@@ -1,28 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Windows.Controls;
+using RestaurantApp.UI.ViewModels;
+using RestaurantApp.Core.Services.Interfaces;
+using RestaurantApp.UI.Infrastructure;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RestaurantApp.UI.Views
 {
-    /// <summary>
-    /// Interaction logic for OrdersView.xaml
-    /// </summary>
     public partial class OrdersView : UserControl
     {
         public OrdersView()
         {
             InitializeComponent();
+
+            // Get required services
+            var orderService = App.ServiceProvider.GetService<IOrderService>();
+            var userSessionService = App.ServiceProvider.GetService<IUserSessionService>();
+            var dialogService = App.ServiceProvider.GetService<IDialogService>();
+            var messageBus = App.ServiceProvider.GetService<IMessageBus>();
+
+            // Create and set ViewModel
+            if (orderService != null && userSessionService != null &&
+                dialogService != null && messageBus != null)
+            {
+                DataContext = new OrdersViewModel(
+                    orderService,
+                    userSessionService,
+                    dialogService,
+                    messageBus);
+            }
+            else
+            {
+                MessageBox.Show("Failed to initialize OrdersView: Required services not available.",
+                    "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

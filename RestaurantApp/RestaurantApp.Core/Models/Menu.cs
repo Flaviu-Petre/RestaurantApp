@@ -15,8 +15,6 @@ namespace RestaurantApp.Core.Models
         public virtual ICollection<MenuDish> MenuDishes { get; set; } = new List<MenuDish>();
         public virtual ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
 
-        // Calculate the price with discount based on contained dishes
-        // Note: The actual discount percentage will be read from configuration
         public decimal CalculatePrice(decimal discountPercentage)
         {
             if (MenuDishes == null || !MenuDishes.Any())

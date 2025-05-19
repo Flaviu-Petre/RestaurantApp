@@ -94,60 +94,114 @@ namespace RestaurantApp.UI.ViewModels
                 // Use separate tasks to isolate DbContext operations
                 List<Category> categories = null;
                 List<Dish> dishes = null;
-                List<Menu> menus = null;
+                List<Menu> menusWithDetails = null;
 
-                // Create separate tasks for each data fetch operation to isolate DbContext usage
+                // Load categories
                 await Task.Run(async () =>
                 {
                     try
                     {
-                        // First operation
                         categories = (await _categoryService.GetAllCategoriesAsync()).ToList();
+                        System.Diagnostics.Debug.WriteLine($"Loaded {categories.Count} categories");
                     }
                     catch (Exception ex)
                     {
                         ErrorMessage = $"Error loading categories: {ex.Message}";
+                        System.Diagnostics.Debug.WriteLine($"Error loading categories: {ex.Message}");
                     }
                 });
 
+                // Load dishes
                 if (categories != null)
                 {
                     await Task.Run(async () =>
                     {
                         try
                         {
-                            // Second operation - only if first succeeded
                             dishes = (await _dishService.GetAllDishesAsync()).ToList();
+                            System.Diagnostics.Debug.WriteLine($"Loaded {dishes.Count} dishes");
                         }
                         catch (Exception ex)
                         {
                             ErrorMessage = $"Error loading dishes: {ex.Message}";
+                            System.Diagnostics.Debug.WriteLine($"Error loading dishes: {ex.Message}");
                         }
                     });
                 }
 
+                // Load menus WITH DETAILS
                 if (dishes != null)
                 {
                     await Task.Run(async () =>
                     {
                         try
                         {
-                            // Third operation - only if second succeeded
-                            menus = (await _menuService.GetAllMenusAsync()).ToList();
+                            // First get all menu IDs
+                            var basicMenus = (await _menuService.GetAllMenusAsync()).ToList();
+                            System.Diagnostics.Debug.WriteLine($"Found {basicMenus.Count} menus");
+
+                            // Then load each menu with full details
+                            menusWithDetails = new List<Menu>();
+                            foreach (var menu in basicMenus)
+                            {
+                                try
+                                {
+                                    var detailedMenu = await _menuService.GetMenuWithDetailsAsync(menu.Id);
+                                    if (detailedMenu != null)
+                                    {
+                                        // Verify dishes are loaded
+                                        if (detailedMenu.MenuDishes != null)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine($"Menu {detailedMenu.Name} has {detailedMenu.MenuDishes.Count} dishes");
+
+                                            // Verify each dish in menu dishes is loaded
+                                            foreach (var menuDish in detailedMenu.MenuDishes)
+                                            {
+                                                if (menuDish.Dish == null)
+                                                {
+                                                    // If dish reference isn't loaded, find it from the dishes we already loaded
+                                                    var dish = dishes.FirstOrDefault(d => d.Id == menuDish.DishId);
+                                                    if (dish != null)
+                                                    {
+                                                        menuDish.Dish = dish;
+                                                        System.Diagnostics.Debug.WriteLine($"Manually linked dish {dish.Name} to menu");
+                                                    }
+                                                    else
+                                                    {
+                                                        System.Diagnostics.Debug.WriteLine($"Could not find dish with ID {menuDish.DishId}");
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    System.Diagnostics.Debug.WriteLine($"Menu includes dish: {menuDish.Dish.Name} with price {menuDish.Dish.Price}");
+                                                }
+                                            }
+                                        }
+
+                                        menusWithDetails.Add(detailedMenu);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"Error loading details for menu {menu.Id}: {ex.Message}");
+                                }
+                            }
                         }
                         catch (Exception ex)
                         {
                             ErrorMessage = $"Error loading menus: {ex.Message}";
+                            System.Diagnostics.Debug.WriteLine($"Error loading menus: {ex.Message}");
                         }
                     });
                 }
 
                 // Only proceed with UI updates if we have all the data
-                if (categories != null && dishes != null && menus != null)
+                if (categories != null && dishes != null && menusWithDetails != null)
                 {
                     // Process data and update UI on the UI thread
                     Application.Current.Dispatcher.Invoke(() =>
                     {
+                        // Convert categories to view models
                         var categoryViewModels = categories.Select(c => new CategoryViewModel
                         {
                             Id = c.Id,
@@ -155,8 +209,17 @@ namespace RestaurantApp.UI.ViewModels
                             Description = c.Description
                         }).ToList();
 
+                        // Convert dishes to view models
                         var dishViewModels = dishes.Select(d => CreateDishViewModel(d)).ToList();
-                        var menuViewModels = menus.Select(m => CreateMenuViewModel(m)).ToList();
+
+                        // Convert menus to view models using our detailed menus
+                        var menuViewModels = menusWithDetails.Select(m => CreateMenuViewModel(m)).ToList();
+
+                        // Log menu prices for debugging
+                        foreach (var menuVM in menuViewModels)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Menu in view model: {menuVM.Name}, Price: {menuVM.Price}");
+                        }
 
                         // Combine dish and menu items
                         var menuItems = new List<MenuItemViewModel>();
@@ -171,14 +234,21 @@ namespace RestaurantApp.UI.ViewModels
 
                         CategoryGroups = new ObservableCollection<IGrouping<CategoryViewModel, MenuItemViewModel>>(categoryGroups);
                         HasItems = categoryGroups.Any() && categoryGroups.SelectMany(g => g).Any();
+
+                        System.Diagnostics.Debug.WriteLine($"Created {CategoryGroups.Count} category groups with {menuItems.Count} total items");
                     });
                 }
             }
             catch (Exception ex)
             {
                 ErrorMessage = $"Error loading menu: {ex.Message}";
-                _dialogService.ShowMessage(ErrorMessage, "Error",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Diagnostics.Debug.WriteLine($"Error in LoadDataAsync: {ex.Message}");
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    _dialogService.ShowMessage(ErrorMessage, "Error",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                });
             }
             finally
             {
@@ -202,23 +272,92 @@ namespace RestaurantApp.UI.ViewModels
                 IsAvailable = dish.TotalQuantity > 0
             };
         }
-
         private MenuItemViewModel CreateMenuViewModel(Menu menu)
         {
-            return new MenuItemViewModel
+            System.Diagnostics.Debug.WriteLine($"Creating menu view model for: {menu.Name}");
+
+            // Default discount percentage
+            decimal discountPercentage = 10m;
+
+            // Initialize price and portion quantity
+            decimal menuPrice = 0;
+            decimal totalPortionQuantity = 0;
+
+            // Check if MenuDishes collection is loaded and contains items
+            if (menu.MenuDishes != null && menu.MenuDishes.Any())
+            {
+                decimal totalDishesPrice = 0;
+
+                foreach (var menuDish in menu.MenuDishes)
+                {
+                    if (menuDish.Dish != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Adding dish price: {menuDish.Dish.Name} = {menuDish.Dish.Price}");
+                        totalDishesPrice += menuDish.Dish.Price;
+
+                        // Accumulate portion quantity 
+                        if (menuDish.QuantityInMenu > 0)
+                        {
+                            totalPortionQuantity += menuDish.QuantityInMenu;
+                        }
+                        else
+                        {
+                            totalPortionQuantity += menuDish.Dish.PortionQuantity;
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"  Dish not loaded for MenuDish with DishId: {menuDish.DishId}");
+                    }
+                }
+
+                // Apply discount to price
+                //menuPrice = totalDishesPrice * (1 - (discountPercentage / 100m));
+                menuPrice = totalDishesPrice;
+                System.Diagnostics.Debug.WriteLine($"  Calculated price: {menuPrice} (from total: {totalDishesPrice})");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"  Menu doesn't have dishes loaded");
+
+                // Use menu's built-in calculation method
+                try
+                {
+                    menuPrice = menu.CalculatePrice(discountPercentage);
+                    System.Diagnostics.Debug.WriteLine($"  Used menu's calculation method: {menuPrice}");
+
+                    // Default portion quantity since we can't calculate it
+                    totalPortionQuantity = 200;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"  Error calculating menu price: {ex.Message}");
+                    menuPrice = 0;
+                    totalPortionQuantity = 0;
+                }
+            }
+
+            // Round the portion quantity to avoid excessive decimal places
+            totalPortionQuantity = Math.Round(totalPortionQuantity);
+
+            // Create and return the view model
+            var viewModel = new MenuItemViewModel
             {
                 Id = menu.Id,
                 Name = menu.Name,
-                Description = menu.Description ?? "Delicious menu", // Default if null
-                Price = menu.CalculatePrice(10), // Calculate locally instead of using service
-                PortionQuantity = 0, // Menu doesn't have a single portion quantity
+                Description = menu.Description ?? "Delicious menu",
+                Price = menuPrice,
+                PortionQuantity = totalPortionQuantity,
                 CategoryId = menu.CategoryId,
-                ImageUrl = "/Images/default-menu.png", // Default menu image
+                ImageUrl = "/Images/default-menu.png",
                 AllergensList = GetMenuAllergensList(menu),
                 HasAllergens = DoesMenuHaveAllergens(menu),
                 IsAvailable = IsMenuAvailable(menu),
-                IsMenu = true // Indicate this is a menu, not a dish
+                IsMenu = true
             };
+
+            System.Diagnostics.Debug.WriteLine($"  Created view model with price: {viewModel.Price}");
+            return viewModel;
         }
 
         // Helper methods for Dish properties
@@ -240,23 +379,6 @@ namespace RestaurantApp.UI.ViewModels
             return string.Join(", ", dish.DishAllergens
                 .Where(da => da.Allergen != null)
                 .Select(da => da.Allergen.Name));
-        }
-
-        // Helper methods for Menu properties
-        private decimal CalculateMenuPrice(Menu menu)
-        {
-            try
-            {
-                // Use a separate task to avoid DbContext sharing
-                var task = Task.Run(async () => await _menuService.CalculateMenuPriceAsync(menu.Id, 10));
-                task.Wait(); // Since we're already on a background thread, we can wait
-                return task.Result;
-            }
-            catch
-            {
-                // Fallback if service call fails
-                return menu.CalculatePrice(10); // 10% discount
-            }
         }
 
         private string GetMenuAllergensList(Menu menu)
@@ -284,13 +406,35 @@ namespace RestaurantApp.UI.ViewModels
             return menu.MenuDishes?.All(md => md.Dish?.TotalQuantity > 0) ?? false;
         }
 
+        // Fix the AddToCart method in MenuViewModel.cs
         private void AddToCart(MenuItemViewModel item)
         {
-            if (item == null || !_userSessionService.IsLoggedIn || !IsCustomer)
+            if (item == null || !_userSessionService.IsLoggedIn || !_userSessionService.IsCustomer)
+            {
+                if (!_userSessionService.IsLoggedIn)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _dialogService.ShowMessage("You need to be logged in to add items to cart",
+                            "Login Required", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                    });
+                    return;
+                }
                 return;
+            }
 
             try
             {
+                if (!item.IsAvailable)
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        _dialogService.ShowMessage("This item is currently not available",
+                            "Unavailable", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    });
+                    return;
+                }
+
                 if (!item.IsMenu) // It's a dish
                 {
                     _cartService.AddDish(item.Id, 1);
