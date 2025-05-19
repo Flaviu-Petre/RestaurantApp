@@ -15,6 +15,7 @@ namespace RestaurantApp.UI.Infrastructure
 
         event EventHandler UserLoggedIn;
         event EventHandler UserLoggedOut;
+        event EventHandler UserChanged;
     }
 
     public class UserSessionService : IUserSessionService
@@ -31,17 +32,20 @@ namespace RestaurantApp.UI.Infrastructure
 
         public event EventHandler UserLoggedIn;
         public event EventHandler UserLoggedOut;
+        public event EventHandler UserChanged; // Add this new event
 
         public void Login(User user)
         {
             _currentUser = user ?? throw new ArgumentNullException(nameof(user));
             UserLoggedIn?.Invoke(this, EventArgs.Empty);
+            UserChanged?.Invoke(this, EventArgs.Empty); // Notify user changed
         }
 
         public void Logout()
         {
             _currentUser = null;
             UserLoggedOut?.Invoke(this, EventArgs.Empty);
+            UserChanged?.Invoke(this, EventArgs.Empty); // Notify user changed
         }
     }
 }

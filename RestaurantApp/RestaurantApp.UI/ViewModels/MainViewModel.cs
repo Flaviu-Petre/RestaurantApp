@@ -33,11 +33,11 @@ namespace RestaurantApp.UI.ViewModels
             NavigateToRegisterCommand = new RelayCommand(NavigateToRegister);
             NavigateToCategoriesCommand = new RelayCommand(NavigateToCategories);
             NavigateToDishesCommand = new RelayCommand(NavigateToDishes);
-            NavigateToMenusCommand = new RelayCommand(NavigateToMenus);
             NavigateToAllergensCommand = new RelayCommand(NavigateToAllergens);
             NavigateToAllOrdersCommand = new RelayCommand(NavigateToAllOrders);
             NavigateToLowStockCommand = new RelayCommand(NavigateToLowStock);
             LoginCommand = new RelayCommand(Login);
+            NavigateToMenuManagementCommand = new RelayCommand(NavigateToMenuManagement);
 
             // Initial view - navigate to menu by default
             NavigateToMenu();
@@ -83,6 +83,7 @@ namespace RestaurantApp.UI.ViewModels
         public ICommand NavigateToAllOrdersCommand { get; }
         public ICommand NavigateToLowStockCommand { get; }
         public ICommand LoginCommand { get; }
+        public ICommand NavigateToMenuManagementCommand { get; }
 
         // Navigation methods
         private void NavigateToMenu()
@@ -261,6 +262,15 @@ namespace RestaurantApp.UI.ViewModels
 
             // Navigate to menu after logout
             NavigateToMenu();
+        }
+
+        private void NavigateToMenuManagement()
+        {
+            if (EnsureEmployee())
+            {
+                _navigationService.NavigateTo("MenuManagementView");
+                StatusMessage = "Managing menus";
+            }
         }
 
         public override void Cleanup()

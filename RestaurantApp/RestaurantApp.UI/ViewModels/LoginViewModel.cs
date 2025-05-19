@@ -78,14 +78,11 @@ namespace RestaurantApp.UI.ViewModels
 
                 if (user != null)
                 {
-                    // Login successful
-                    _userSessionService.Login(user);
-
                     // Clear login form
                     Email = string.Empty;
                     Password = string.Empty;
 
-                    // Navigate to appropriate view based on user role
+                    // Navigate to appropriate view based on user role first
                     if (user.Role == Core.Models.UserRole.Employee)
                     {
                         _navigationService.NavigateTo("AllOrdersView");
@@ -94,6 +91,9 @@ namespace RestaurantApp.UI.ViewModels
                     {
                         _navigationService.NavigateTo("MenuView");
                     }
+
+                    // Then login the user - this will trigger the UserChanged event
+                    _userSessionService.Login(user);
                 }
                 else
                 {

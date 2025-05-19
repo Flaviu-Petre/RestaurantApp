@@ -74,9 +74,9 @@
                     <Button Content="Manage Dishes" Command="{Binding NavigateToDishesCommand}" 
                             Style="{StaticResource NavButtonStyle}"
                             Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                    <Button Content="Manage Menus" Command="{Binding NavigateToMenusCommand}" 
+                    <Button Content="Manage Menus" Command="{Binding NavigateToMenuManagementCommand}" 
                             Style="{StaticResource NavButtonStyle}"
-                            Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                            Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}" Click="Button_Click_1"/>
                     <Button Content="Manage Allergens" Command="{Binding NavigateToAllergensCommand}" 
                             Style="{StaticResource NavButtonStyle}"
                             Visibility="{Binding IsEmployee, Converter={StaticResource BoolToVisibilityConverter}}"/>

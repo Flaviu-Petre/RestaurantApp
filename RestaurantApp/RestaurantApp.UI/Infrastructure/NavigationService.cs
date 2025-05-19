@@ -22,10 +22,10 @@ namespace RestaurantApp.UI.Infrastructure
         private readonly ContentControl _contentControl;
         private readonly IServiceProvider _serviceProvider;
 
-        public NavigationService(ContentControl contentControl, IServiceProvider serviceProvider = null)
+        public NavigationService(ContentControl contentControl)
         {
             _contentControl = contentControl ?? throw new ArgumentNullException(nameof(contentControl));
-            _serviceProvider = serviceProvider;
+            _serviceProvider = App.ServiceProvider;
         }
 
         public void RegisterView(string viewName, Type viewType)
@@ -64,7 +64,7 @@ namespace RestaurantApp.UI.Infrastructure
                 var view = (UserControl)Activator.CreateInstance(viewType);
                 System.Diagnostics.Debug.WriteLine($"Created view of type: {viewType.Name}");
 
-                // Set the view as content - just create the view without trying to set up its ViewModel
+                // Set the view as content
                 _contentControl.Content = view;
                 System.Diagnostics.Debug.WriteLine($"Set content to view: {viewType.Name}");
             }

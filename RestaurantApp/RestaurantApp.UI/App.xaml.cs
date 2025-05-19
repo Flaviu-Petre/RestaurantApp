@@ -14,6 +14,7 @@ using RestaurantApp.Core.Services.Implementations;
 using RestaurantApp.Core.Services.Interfaces;
 using System.IO;
 using RestaurantApp.UI.Views;
+using Microsoft.EntityFrameworkCore.Design;
 
 namespace RestaurantApp.UI
 {
@@ -36,34 +37,38 @@ namespace RestaurantApp.UI
 
                 services.AddSingleton<IConfiguration>(configuration);
 
-                // Register DbContext
+                // Register DbContext with TRANSIENT lifetime
                 string connectionString = configuration.GetConnectionString("DefaultConnection");
                 services.AddDbContext<RestaurantDbContext>(options =>
-                    options.UseSqlServer(connectionString));
+                    options.UseSqlServer(connectionString), ServiceLifetime.Transient);
 
-                // Register StoredProcedureExecutor
-                services.AddScoped<IStoredProcedureExecutor, StoredProcedureExecutor>();
+                // Register StoredProcedureExecutor as transient
+                services.AddTransient<IStoredProcedureExecutor, StoredProcedureExecutor>();
 
-                // Register repositories
-                services.AddScoped<IRepositoryFactory, RepositoryFactory>();
-                services.AddScoped<ICategoryRepository, CategoryRepository>();
-                services.AddScoped<IDishRepository, DishRepository>();
-                services.AddScoped<IMenuRepository, MenuRepository>();
-                services.AddScoped<IOrderRepository, OrderRepository>();
-                services.AddScoped<IUserRepository, UserRepository>();
-                services.AddScoped<IAllergenRepository, AllergenRepository>();
+                // Register DbContextFactory
+                services.AddSingleton<IDesignTimeDbContextFactory<RestaurantDbContext>>(
+                    new RestaurantDbContextFactory(connectionString));
 
-                // Register services
-                services.AddScoped<ICategoryService, CategoryService>();
-                services.AddScoped<IDishService, DishService>();
-                services.AddScoped<IMenuService, MenuService>();
-                services.AddScoped<IAllergenService, AllergenService>();
-                services.AddScoped<IOrderService, OrderService>();
-                services.AddScoped<IUserService, UserService>();
-                services.AddScoped<IAuthenticationService, AuthenticationService>();
-                services.AddScoped<IConfigurationService, ConfigurationService>();
+                // Register repositories as transient
+                services.AddTransient<IRepositoryFactory, RepositoryFactory>();
+                services.AddTransient<ICategoryRepository, CategoryRepository>();
+                services.AddTransient<IDishRepository, DishRepository>();
+                services.AddTransient<IMenuRepository, MenuRepository>();
+                services.AddTransient<IOrderRepository, OrderRepository>();
+                services.AddTransient<IUserRepository, UserRepository>();
+                services.AddTransient<IAllergenRepository, AllergenRepository>();
 
-                // Register UI infrastructure services
+                // Register business services as transient
+                services.AddTransient<ICategoryService, CategoryService>();
+                services.AddTransient<IDishService, DishService>();
+                services.AddTransient<IMenuService, MenuService>();
+                services.AddTransient<IAllergenService, AllergenService>();
+                services.AddTransient<IOrderService, OrderService>();
+                services.AddTransient<IUserService, UserService>();
+                services.AddTransient<IAuthenticationService, AuthenticationService>();
+                services.AddTransient<IConfigurationService, ConfigurationService>();
+
+                // Register UI infrastructure services that should be singletons
                 services.AddSingleton<IUserSessionService, UserSessionService>();
                 services.AddSingleton<IMessageBus, MessageBus>();
                 services.AddSingleton<IDialogService, DialogService>();
@@ -91,6 +96,7 @@ namespace RestaurantApp.UI
                 navigationService.RegisterView("AllOrdersView", typeof(ManageOrdersView));
                 navigationService.RegisterView("AllergensView", typeof(AllergensView));
                 navigationService.RegisterView("SearchView", typeof(SearchView));
+                navigationService.RegisterView("MenuManagementView", typeof(MenuManagementView));
 
                 // Register the NavigationService as a singleton
                 services.AddSingleton<INavigationService>(navigationService);

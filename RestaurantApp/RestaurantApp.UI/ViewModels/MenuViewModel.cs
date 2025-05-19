@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 
 namespace RestaurantApp.UI.ViewModels
@@ -20,12 +21,12 @@ namespace RestaurantApp.UI.ViewModels
         private readonly IDialogService _dialogService;
 
         public MenuViewModel(
-            ICategoryService categoryService,
-            IDishService dishService,
-            IMenuService menuService,
-            IUserSessionService userSessionService,
-            ICartService cartService,
-            IDialogService dialogService)
+        ICategoryService categoryService,
+        IDishService dishService,
+        IMenuService menuService,
+        IUserSessionService userSessionService,
+        ICartService cartService,
+        IDialogService dialogService)
         {
             _categoryService = categoryService;
             _dishService = dishService;
@@ -34,11 +35,14 @@ namespace RestaurantApp.UI.ViewModels
             _cartService = cartService;
             _dialogService = dialogService;
 
+            // Subscribe to user session changes
+            _userSessionService.UserChanged += OnUserChanged;
+
             // Initialize commands
             AddToCartCommand = new RelayCommand<MenuItemViewModel>(AddToCart);
             RefreshCommand = new RelayCommand(async () => await LoadDataAsync());
 
-            // Load data
+            // Load data asynchronously
             _ = LoadDataAsync();
         }
 
@@ -57,6 +61,7 @@ namespace RestaurantApp.UI.ViewModels
             set => SetProperty(ref _hasItems, value);
         }
 
+        // Expose user type for visibility binding
         public bool IsCustomer => _userSessionService.IsCustomer;
 
         // Commands
@@ -64,79 +69,156 @@ namespace RestaurantApp.UI.ViewModels
         public ICommand RefreshCommand { get; }
 
         // Methods
+        private void OnUserChanged(object sender, EventArgs e)
+        {
+            // Notify UI that IsCustomer property has changed
+            OnPropertyChanged(nameof(IsCustomer));
+
+            // Reload data - this is important!
+            _ = LoadDataAsync();
+        }
+
+        public override void Cleanup()
+        {
+            _userSessionService.UserChanged -= OnUserChanged;
+            base.Cleanup();
+        }
+
         private async Task LoadDataAsync()
         {
             try
             {
                 IsBusy = true;
+                ErrorMessage = string.Empty;
 
-                // Load categories, dishes, and menus
-                var categories = await _categoryService.GetAllCategoriesAsync();
-                var dishes = await _dishService.GetAllDishesAsync();
-                var menus = await _menuService.GetAllMenusAsync();
+                // Use separate tasks to isolate DbContext operations
+                List<Category> categories = null;
+                List<Dish> dishes = null;
+                List<Menu> menus = null;
 
-                // Create category view models
-                var categoryViewModels = categories.Select(c => new CategoryViewModel
+                // Create separate tasks for each data fetch operation to isolate DbContext usage
+                await Task.Run(async () =>
                 {
-                    Id = c.Id,
-                    Name = c.Name,
-                    Description = c.Description
-                }).ToList();
+                    try
+                    {
+                        // First operation
+                        categories = (await _categoryService.GetAllCategoriesAsync()).ToList();
+                    }
+                    catch (Exception ex)
+                    {
+                        ErrorMessage = $"Error loading categories: {ex.Message}";
+                    }
+                });
 
-                // Create dish view models
-                var dishViewModels = dishes.Select(d => new DishItemViewModel
+                if (categories != null)
                 {
-                    Id = d.Id,
-                    Name = d.Name,
-                    Description = "Delicious dish", // Default description since Dish doesn't have Description property
-                    Price = d.Price,
-                    PortionQuantity = d.PortionQuantity,
-                    CategoryId = d.CategoryId,
-                    ImageUrl = GetDishImageUrl(d),
-                    AllergensList = GetDishAllergensList(d),
-                    HasAllergens = (d.DishAllergens?.Any() ?? false),
-                    IsAvailable = d.TotalQuantity > 0
-                }).ToList();
+                    await Task.Run(async () =>
+                    {
+                        try
+                        {
+                            // Second operation - only if first succeeded
+                            dishes = (await _dishService.GetAllDishesAsync()).ToList();
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorMessage = $"Error loading dishes: {ex.Message}";
+                        }
+                    });
+                }
 
-                // Create menu view models
-                var menuViewModels = menus.Select(m => new MenuItemViewModel
+                if (dishes != null)
                 {
-                    Id = m.Id,
-                    Name = m.Name,
-                    Description = m.Description ?? "Delicious menu", // Default if null
-                    Price = CalculateMenuPrice(m),
-                    PortionQuantity = 0, // Menu doesn't have a single portion quantity
-                    CategoryId = m.CategoryId,
-                    ImageUrl = "/Images/default-menu.png", // Default menu image
-                    AllergensList = GetMenuAllergensList(m),
-                    HasAllergens = DoesMenuHaveAllergens(m),
-                    IsAvailable = IsMenuAvailable(m),
-                    IsMenu = true // Indicate this is a menu, not a dish
-                }).ToList();
+                    await Task.Run(async () =>
+                    {
+                        try
+                        {
+                            // Third operation - only if second succeeded
+                            menus = (await _menuService.GetAllMenusAsync()).ToList();
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorMessage = $"Error loading menus: {ex.Message}";
+                        }
+                    });
+                }
 
-                // Combine dish and menu items
-                var menuItems = new List<MenuItemViewModel>();
-                menuItems.AddRange(dishViewModels);
-                menuItems.AddRange(menuViewModels);
+                // Only proceed with UI updates if we have all the data
+                if (categories != null && dishes != null && menus != null)
+                {
+                    // Process data and update UI on the UI thread
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var categoryViewModels = categories.Select(c => new CategoryViewModel
+                        {
+                            Id = c.Id,
+                            Name = c.Name,
+                            Description = c.Description
+                        }).ToList();
 
-                // Group by category
-                var categoryGroups = menuItems
-                    .GroupBy(item => categoryViewModels.FirstOrDefault(c => c.Id == item.CategoryId))
-                    .Where(g => g.Key != null) // Filter out any items without a category
-                    .ToList();
+                        var dishViewModels = dishes.Select(d => CreateDishViewModel(d)).ToList();
+                        var menuViewModels = menus.Select(m => CreateMenuViewModel(m)).ToList();
 
-                CategoryGroups = new ObservableCollection<IGrouping<CategoryViewModel, MenuItemViewModel>>(categoryGroups);
-                HasItems = categoryGroups.Any() && categoryGroups.SelectMany(g => g).Any();
+                        // Combine dish and menu items
+                        var menuItems = new List<MenuItemViewModel>();
+                        menuItems.AddRange(dishViewModels);
+                        menuItems.AddRange(menuViewModels);
+
+                        // Group by category
+                        var categoryGroups = menuItems
+                            .GroupBy(item => categoryViewModels.FirstOrDefault(c => c.Id == item.CategoryId))
+                            .Where(g => g.Key != null) // Filter out any items without a category
+                            .ToList();
+
+                        CategoryGroups = new ObservableCollection<IGrouping<CategoryViewModel, MenuItemViewModel>>(categoryGroups);
+                        HasItems = categoryGroups.Any() && categoryGroups.SelectMany(g => g).Any();
+                    });
+                }
             }
             catch (Exception ex)
             {
                 ErrorMessage = $"Error loading menu: {ex.Message}";
-                _dialogService.ShowMessage(ErrorMessage, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                _dialogService.ShowMessage(ErrorMessage, "Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
             finally
             {
                 IsBusy = false;
             }
+        }
+
+        private DishItemViewModel CreateDishViewModel(Dish dish)
+        {
+            return new DishItemViewModel
+            {
+                Id = dish.Id,
+                Name = dish.Name,
+                Description = "Delicious dish", // Default description
+                Price = dish.Price,
+                PortionQuantity = dish.PortionQuantity,
+                CategoryId = dish.CategoryId,
+                ImageUrl = GetDishImageUrl(dish),
+                AllergensList = GetDishAllergensList(dish),
+                HasAllergens = (dish.DishAllergens?.Any() ?? false),
+                IsAvailable = dish.TotalQuantity > 0
+            };
+        }
+
+        private MenuItemViewModel CreateMenuViewModel(Menu menu)
+        {
+            return new MenuItemViewModel
+            {
+                Id = menu.Id,
+                Name = menu.Name,
+                Description = menu.Description ?? "Delicious menu", // Default if null
+                Price = menu.CalculatePrice(10), // Calculate locally instead of using service
+                PortionQuantity = 0, // Menu doesn't have a single portion quantity
+                CategoryId = menu.CategoryId,
+                ImageUrl = "/Images/default-menu.png", // Default menu image
+                AllergensList = GetMenuAllergensList(menu),
+                HasAllergens = DoesMenuHaveAllergens(menu),
+                IsAvailable = IsMenuAvailable(menu),
+                IsMenu = true // Indicate this is a menu, not a dish
+            };
         }
 
         // Helper methods for Dish properties
@@ -163,10 +245,12 @@ namespace RestaurantApp.UI.ViewModels
         // Helper methods for Menu properties
         private decimal CalculateMenuPrice(Menu menu)
         {
-            // You can either call the menu service or calculate it directly
             try
             {
-                return _menuService.CalculateMenuPriceAsync(menu.Id, 10).Result; // 10% is a placeholder discount
+                // Use a separate task to avoid DbContext sharing
+                var task = Task.Run(async () => await _menuService.CalculateMenuPriceAsync(menu.Id, 10));
+                task.Wait(); // Since we're already on a background thread, we can wait
+                return task.Result;
             }
             catch
             {
@@ -216,12 +300,20 @@ namespace RestaurantApp.UI.ViewModels
                     _cartService.AddMenu(item.Id, 1);
                 }
 
-                _dialogService.ShowMessage($"{item.Name} added to cart", "Item Added", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    _dialogService.ShowMessage($"{item.Name} added to cart", "Item Added",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                });
             }
             catch (Exception ex)
             {
-                ErrorMessage = $"Error adding to cart: {ex.Message}";
-                _dialogService.ShowMessage(ErrorMessage, "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ErrorMessage = $"Error adding to cart: {ex.Message}";
+                    _dialogService.ShowMessage(ErrorMessage, "Error",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                });
             }
         }
     }
