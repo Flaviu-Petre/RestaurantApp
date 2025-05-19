@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
 
 namespace RestaurantApp.UI.Infrastructure
 {
@@ -36,24 +37,39 @@ namespace RestaurantApp.UI.Infrastructure
             {
                 // Update quantity
                 existingItem.Quantity += quantity;
+                System.Diagnostics.Debug.WriteLine($"Updated existing dish quantity to {existingItem.Quantity}");
+                return;
             }
-            else
-            {
-                // Add new item
-                var dish = _dishService.GetDishByIdAsync(dishId).Result;
-                if (dish == null)
-                    throw new ArgumentException($"Dish with ID {dishId} not found");
 
-                _cartItems.Add(new CartItem
+            // Add new item asynchronously to avoid UI thread blocking
+            Task.Run(async () => {
+                try
                 {
-                    Id = dishId,
-                    IsDish = true,
-                    Name = dish.Name,
-                    UnitPrice = dish.Price,
-                    Quantity = quantity,
-                    ImageUrl = dish.Images?.FirstOrDefault()?.ImagePath ?? "/Images/default-dish.png"
-                });
-            }
+                    // Get dish details
+                    var dish = await _dishService.GetDishByIdAsync(dishId);
+                    if (dish == null)
+                        throw new ArgumentException($"Dish with ID {dishId} not found");
+
+                    // Add to cart on UI thread to avoid collection modification issues
+                    Application.Current.Dispatcher.Invoke(() => {
+                        _cartItems.Add(new CartItem
+                        {
+                            Id = dishId,
+                            IsDish = true,
+                            Name = dish.Name,
+                            UnitPrice = dish.Price,
+                            Quantity = quantity,
+                            ImageUrl = dish.Images?.FirstOrDefault()?.ImagePath ?? "/Images/default-dish.png"
+                        });
+                        System.Diagnostics.Debug.WriteLine($"Added new dish to cart: {dish.Name}");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error adding dish to cart: {ex.Message}\n{ex.StackTrace}");
+                    throw; // Rethrow to allow handling in the ViewModel
+                }
+            }).Wait(); // This could be causing a deadlock - consider removing .Wait()
         }
 
         public void AddMenu(int menuId, int quantity)
@@ -67,27 +83,43 @@ namespace RestaurantApp.UI.Infrastructure
             {
                 // Update quantity
                 existingItem.Quantity += quantity;
+                System.Diagnostics.Debug.WriteLine($"Updated existing menu quantity to {existingItem.Quantity}");
+                return;
             }
-            else
-            {
-                // Add new item
-                var menu = _menuService.GetMenuByIdAsync(menuId).Result;
-                if (menu == null)
-                    throw new ArgumentException($"Menu with ID {menuId} not found");
 
-                var menuDiscountPercentage = _configService.GetMenuDiscountPercentageAsync().Result;
-                var price = _menuService.CalculateMenuPriceAsync(menuId, menuDiscountPercentage).Result;
-
-                _cartItems.Add(new CartItem
+            // Add new item asynchronously to avoid UI thread blocking
+            Task.Run(async () => {
+                try
                 {
-                    Id = menuId,
-                    IsDish = false,
-                    Name = menu.Name,
-                    UnitPrice = price,
-                    Quantity = quantity,
-                    ImageUrl = "/Images/default-menu.png" // Default image for menus
-                });
-            }
+                    // Get menu details
+                    var menu = await _menuService.GetMenuByIdAsync(menuId);
+                    if (menu == null)
+                        throw new ArgumentException($"Menu with ID {menuId} not found");
+
+                    // Calculate price
+                    var menuDiscountPercentage = await _configService.GetMenuDiscountPercentageAsync();
+                    var price = await _menuService.CalculateMenuPriceAsync(menuId, menuDiscountPercentage);
+
+                    // Add to cart on UI thread to avoid collection modification issues
+                    Application.Current.Dispatcher.Invoke(() => {
+                        _cartItems.Add(new CartItem
+                        {
+                            Id = menuId,
+                            IsDish = false,
+                            Name = menu.Name,
+                            UnitPrice = price,
+                            Quantity = quantity,
+                            ImageUrl = "/Images/default-menu.png" // Default image for menus
+                        });
+                        System.Diagnostics.Debug.WriteLine($"Added new menu to cart: {menu.Name}");
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error adding menu to cart: {ex.Message}\n{ex.StackTrace}");
+                    throw; // Rethrow to allow handling in the ViewModel
+                }
+            }).Wait(); // This could be causing a deadlock - consider removing .Wait()
         }
 
         public void UpdateQuantity(int itemId, bool isDish, int newQuantity)

@@ -39,7 +39,7 @@ namespace RestaurantApp.UI.ViewModels
             _userSessionService.UserChanged += OnUserChanged;
 
             // Initialize commands
-            AddToCartCommand = new RelayCommand<MenuItemViewModel>(AddToCart);
+            AddToCartCommand = new RelayCommand<MenuItemViewModel>(AddToCart, item => item != null);
             RefreshCommand = new RelayCommand(async () => await LoadDataAsync());
 
             // Load data asynchronously
@@ -409,56 +409,72 @@ namespace RestaurantApp.UI.ViewModels
         // Fix the AddToCart method in MenuViewModel.cs
         private void AddToCart(MenuItemViewModel item)
         {
-            if (item == null || !_userSessionService.IsLoggedIn || !_userSessionService.IsCustomer)
+            // Run the operation on a background thread to avoid UI freezing
+            Task.Run(() =>
             {
-                if (!_userSessionService.IsLoggedIn)
+                try
                 {
+                    System.Diagnostics.Debug.WriteLine($"AddToCart called for item: {item?.Name}");
+
+                    if (item == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Item is null, returning");
+                        return;
+                    }
+
+                    if (!_userSessionService.IsLoggedIn || !_userSessionService.IsCustomer)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            _dialogService.ShowMessage("You need to be logged in to add items to cart",
+                                "Login Required", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                        });
+                        return;
+                    }
+
+                    if (!item.IsAvailable)
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            _dialogService.ShowMessage("This item is currently not available",
+                                "Unavailable", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                        });
+                        return;
+                    }
+
+                    // Add the item based on type
+                    if (!item.IsMenu) // It's a dish
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Adding dish to cart: {item.Id}");
+                        _cartService.AddDish(item.Id, 1);
+                    }
+                    else // It's a menu
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Adding menu to cart: {item.Id}");
+                        _cartService.AddMenu(item.Id, 1);
+                    }
+
+                    // Show success message on UI thread
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        _dialogService.ShowMessage("You need to be logged in to add items to cart",
-                            "Login Required", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                        _dialogService.ShowMessage($"{item.Name} added to cart", "Item Added",
+                            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                     });
-                    return;
-                }
-                return;
-            }
 
-            try
-            {
-                if (!item.IsAvailable)
+                    System.Diagnostics.Debug.WriteLine("Item added successfully");
+                }
+                catch (Exception ex)
                 {
+                    System.Diagnostics.Debug.WriteLine($"Error in AddToCart: {ex.Message}\n{ex.StackTrace}");
+
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        _dialogService.ShowMessage("This item is currently not available",
-                            "Unavailable", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                        ErrorMessage = $"Error adding to cart: {ex.Message}";
+                        _dialogService.ShowMessage(ErrorMessage, "Error",
+                            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                     });
-                    return;
                 }
-
-                if (!item.IsMenu) // It's a dish
-                {
-                    _cartService.AddDish(item.Id, 1);
-                }
-                else // It's a menu
-                {
-                    _cartService.AddMenu(item.Id, 1);
-                }
-
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    _dialogService.ShowMessage($"{item.Name} added to cart", "Item Added",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
-                });
-            }
-            catch (Exception ex)
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    ErrorMessage = $"Error adding to cart: {ex.Message}";
-                    _dialogService.ShowMessage(ErrorMessage, "Error",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                });
-            }
+            });
         }
     }
 
