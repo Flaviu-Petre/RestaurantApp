@@ -119,5 +119,17 @@ namespace RestaurantApp.Data.Repositories.Implementations
                 await UpdateAsync(order);
             }
         }
+
+        public async Task<IEnumerable<Order>> GetAllOrdersAsync()
+        {
+            return await _context.Orders
+                .Include(o => o.User)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Dish)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Menu)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+        }
     }
 }

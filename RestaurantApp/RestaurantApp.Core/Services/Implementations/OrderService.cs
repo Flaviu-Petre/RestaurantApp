@@ -28,7 +28,7 @@ namespace RestaurantApp.Core.Services.Implementations
 
         public async Task<IEnumerable<Order>> GetAllOrdersAsync()
         {
-            return await _orderRepository.GetAllAsync();
+            return await _orderRepository.GetAllOrdersAsync();
         }
 
         public async Task<IEnumerable<Order>> GetRecentOrdersAsync(int count)

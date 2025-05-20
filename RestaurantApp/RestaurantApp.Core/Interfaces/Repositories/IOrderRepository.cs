@@ -28,5 +28,7 @@ namespace RestaurantApp.Core.Interfaces.Repositories
 
         // Update order status
         Task UpdateOrderStatusAsync(int id, OrderStatus newStatus);
+
+        Task<IEnumerable<Order>> GetAllOrdersAsync();
     }
 }
