@@ -56,16 +56,6 @@
         <!-- Search Results -->
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding SearchResults}">
-                <ItemsControl.GroupStyle>
-                    <GroupStyle>
-                        <GroupStyle.HeaderTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="18" 
-                                          Margin="0,20,0,10" Foreground="#FF3F51B5"/>
-                            </DataTemplate>
-                        </GroupStyle.HeaderTemplate>
-                    </GroupStyle>
-                </ItemsControl.GroupStyle>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Border Margin="5" BorderBrush="#FFDDDDDD" BorderThickness="1" CornerRadius="5">
@@ -79,6 +69,7 @@
                                 <!-- Image -->
                                 <Border Grid.Column="0" Width="80" Height="80" Background="#FFF0F0F0" 
                                        CornerRadius="5" Margin="0,0,10,0">
+                                    <!-- Using the image binding that works with file paths -->
                                     <Image Source="{Binding ImageUrl}" Stretch="Uniform" Margin="5"/>
                                 </Border>
 

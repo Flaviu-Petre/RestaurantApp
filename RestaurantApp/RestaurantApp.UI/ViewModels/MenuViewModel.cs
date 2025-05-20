@@ -9,6 +9,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace RestaurantApp.UI.ViewModels
 {
@@ -63,6 +65,7 @@ namespace RestaurantApp.UI.ViewModels
             set => SetProperty(ref _hasItems, value);
         }
 
+      
         // Expose user type for visibility binding
         public bool IsCustomer => _userSessionService.IsCustomer;
 
@@ -261,15 +264,21 @@ namespace RestaurantApp.UI.ViewModels
 
         private DishItemViewModel CreateDishViewModel(Dish dish)
         {
-            // Asigură-te că dish.Category nu este null
+            // Ensure dish.Category isn't null
             string categoryName = dish.Category?.Name ?? "Unknown Category";
 
-            // Extrage descrierea reală din dish (dacă există un câmp pentru descriere)
+            // Get dish description
             string description = string.IsNullOrEmpty(dish.Name) ?
                 $"Delicious {dish.Name}" : dish.Name;
 
-            // Obține lista de alergeni
+            // Get allergens list
             string allergensList = GetDishAllergensList(dish);
+
+            // Create image path that works in the UI
+            string imagePath = GetDishImageUrl(dish);
+
+            // Create an image source that will work in the UI
+            var imageSource = ImageHelper.LoadImageSource(imagePath);
 
             return new DishItemViewModel
             {
@@ -280,7 +289,8 @@ namespace RestaurantApp.UI.ViewModels
                 PortionQuantity = dish.PortionQuantity,
                 CategoryId = dish.CategoryId,
                 CategoryName = categoryName,
-                ImageUrl = GetDishImageUrl(dish),
+                ImageUrl = imagePath,
+                ImageSource = imageSource, // Add this property to your viewmodel
                 AllergensList = allergensList,
                 HasAllergens = !string.IsNullOrEmpty(allergensList),
                 IsAvailable = dish.TotalQuantity > 0
@@ -582,6 +592,8 @@ namespace RestaurantApp.UI.ViewModels
         {
             IsMenu = false; // This is a dish, not a menu
         }
+
+        public BitmapImage ImageSource { get; set; }
     }
 
     public class MenuDishViewModel

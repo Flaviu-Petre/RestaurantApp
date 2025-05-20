@@ -363,28 +363,21 @@ namespace RestaurantApp.UI.ViewModels.Admin
                 bool success = _dialogService.ShowOpenFileDialog("Image files (*.jpg;*.jpeg;*.png)|*.jpg;*.jpeg;*.png", out string filePath);
                 if (success && !string.IsNullOrEmpty(filePath))
                 {
-                    // Create a copy of the image in the application directory
-                    string fileName = Path.GetFileName(filePath);
-                    string destDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images", "Dishes");
+                    // Save the image to application storage
+                    string savedImagePath = ImageHelper.SaveImageToAppStorage(filePath);
 
-                    // Create the directory if it doesn't exist
-                    if (!Directory.Exists(destDir))
+                    if (!string.IsNullOrEmpty(savedImagePath))
                     {
-                        Directory.CreateDirectory(destDir);
+                        // Create a new DishImage
+                        var dishImage = new DishImage
+                        {
+                            ImagePath = savedImagePath,
+                            DishId = SelectedDish.Id
+                        };
+
+                        // Add to the collection that's bound to the UI
+                        DishImages.Add(dishImage);
                     }
-
-                    string destPath = Path.Combine(destDir, $"{Guid.NewGuid()}_{fileName}");
-                    File.Copy(filePath, destPath, true);
-
-                    // Create a new DishImage
-                    var dishImage = new DishImage
-                    {
-                        ImagePath = destPath,
-                        DishId = SelectedDish.Id
-                    };
-
-                    // Add to the list
-                    DishImages.Add(dishImage);
                 }
             }
             catch (Exception ex)
