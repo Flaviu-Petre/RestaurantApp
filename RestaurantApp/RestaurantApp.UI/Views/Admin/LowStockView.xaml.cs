@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Windows.Controls;
+using RestaurantApp.UI.ViewModels.Admin;
+using RestaurantApp.Core.Services.Interfaces;
+using RestaurantApp.UI.Infrastructure;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RestaurantApp.UI.Views.Admin
 {
@@ -23,6 +15,25 @@ namespace RestaurantApp.UI.Views.Admin
         public LowStockView()
         {
             InitializeComponent();
+
+            // Get required services
+            var dishService = App.ServiceProvider.GetService<IDishService>();
+            var configService = App.ServiceProvider.GetService<IConfigurationService>();
+            var dialogService = App.ServiceProvider.GetService<IDialogService>();
+
+            // Create and set ViewModel
+            if (dishService != null && configService != null && dialogService != null)
+            {
+                DataContext = new LowStockViewModel(
+                    dishService,
+                    configService,
+                    dialogService);
+            }
+            else
+            {
+                MessageBox.Show("Failed to initialize LowStockView: Required services not available.",
+                    "Initialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }

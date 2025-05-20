@@ -5,11 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RestaurantApp.UI.Views.Dialogs"
         mc:Ignorable="d"
-        Title="Update Order Status" Height="250" Width="400"
+        Title="Update Stock" Height="322" Width="400"
         WindowStartupLocation="CenterOwner"
         WindowStyle="ToolWindow"
         ResizeMode="NoResize">
-    <Grid Margin="20">
+    <Grid Margin="20,20,20,0" Height="257" VerticalAlignment="Top">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -33,11 +33,12 @@
         <StackPanel Grid.Row="3">
             <TextBlock Text="New Stock Quantity (g):" Margin="0,0,0,5"/>
             <TextBox Text="{Binding NewStock, UpdateSourceTrigger=PropertyChanged}" 
-                     Padding="10,5"/>
+                     Padding="10,5" Height="25"/>
         </StackPanel>
 
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-            <Button Content="Cancel" IsCancel="True" Padding="15,5" Margin="0,0,10,0"/>
+            <Button Content="Cancel" Command="{Binding CancelCommand}" 
+                    IsCancel="True" Padding="15,5" Margin="0,0,10,0"/>
             <Button Content="Update" Command="{Binding UpdateStockCommand}" 
                     IsDefault="True" Padding="15,5" Background="#FF3F51B5" Foreground="White"/>
         </StackPanel>

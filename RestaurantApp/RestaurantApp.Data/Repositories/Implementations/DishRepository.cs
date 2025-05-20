@@ -96,6 +96,7 @@ namespace RestaurantApp.Data.Repositories.Implementations
         public async Task<IEnumerable<Dish>> GetLowStockDishesAsync(decimal threshold)
         {
             return await _context.Dishes
+                .Include(d => d.Category)
                 .Where(d => d.TotalQuantity <= threshold)
                 .OrderBy(d => d.TotalQuantity)
                 .ToListAsync();

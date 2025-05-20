@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterOwner"
         WindowStyle="ToolWindow"
         ResizeMode="NoResize">
-    <Grid Margin="20">
+    <Grid Margin="20,20,20,9" RenderTransformOrigin="0.506,0.445">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
