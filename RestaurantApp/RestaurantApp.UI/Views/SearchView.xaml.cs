@@ -20,6 +20,7 @@ namespace RestaurantApp.UI.Views
             var userSessionService = App.ServiceProvider.GetService<IUserSessionService>();
             var cartService = App.ServiceProvider.GetService<ICartService>();
             var dialogService = App.ServiceProvider.GetService<IDialogService>();
+            var categoryService = App.ServiceProvider.GetService<ICategoryService>();
 
             // Create and set ViewModel
             if (dishService != null && menuService != null && allergenService != null &&
@@ -31,7 +32,8 @@ namespace RestaurantApp.UI.Views
                     allergenService,
                     userSessionService,
                     cartService,
-                    dialogService);
+                    dialogService,
+                    categoryService);
             }
             else
             {

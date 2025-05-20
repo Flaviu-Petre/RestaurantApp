@@ -91,5 +91,15 @@ namespace RestaurantApp.Core.Services.Implementations
 
             return dish.TotalQuantity >= requiredQuantity;
         }
+
+        public async Task<Dish> GetDishWithFullDetailsAsync(int id)
+        {
+            return await _dishRepository.GetWithFullDetailsAsync(id);
+        }
+
+        public async Task<IEnumerable<Dish>> GetAllDishesWithFullDetailsAsync()
+        {
+            return await _dishRepository.GetAllWithFullDetailsAsync();
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using RestaurantApp.Core.Models;
+using RestaurantApp.Core.Services.Implementations;
 using RestaurantApp.Core.Services.Interfaces;
 using RestaurantApp.UI.Infrastructure;
 using System;
@@ -41,6 +42,7 @@ namespace RestaurantApp.UI.ViewModels
             // Initialize commands
             AddToCartCommand = new RelayCommand<MenuItemViewModel>(AddToCart, item => item != null);
             RefreshCommand = new RelayCommand(async () => await LoadDataAsync());
+            ShowItemDetailsCommand = new RelayCommand<MenuItemViewModel>(ShowItemDetails);
 
             // Load data asynchronously
             _ = LoadDataAsync();
@@ -67,6 +69,7 @@ namespace RestaurantApp.UI.ViewModels
         // Commands
         public ICommand AddToCartCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand ShowItemDetailsCommand { get; }
 
         // Methods
         private void OnUserChanged(object sender, EventArgs e)
@@ -258,20 +261,47 @@ namespace RestaurantApp.UI.ViewModels
 
         private DishItemViewModel CreateDishViewModel(Dish dish)
         {
+            // Asigură-te că dish.Category nu este null
+            string categoryName = dish.Category?.Name ?? "Unknown Category";
+
+            // Extrage descrierea reală din dish (dacă există un câmp pentru descriere)
+            string description = string.IsNullOrEmpty(dish.Name) ?
+                $"Delicious {dish.Name}" : dish.Name;
+
+            // Obține lista de alergeni
+            string allergensList = GetDishAllergensList(dish);
+
             return new DishItemViewModel
             {
                 Id = dish.Id,
                 Name = dish.Name,
-                Description = "Delicious dish", // Default description
+                Description = description,
                 Price = dish.Price,
                 PortionQuantity = dish.PortionQuantity,
                 CategoryId = dish.CategoryId,
+                CategoryName = categoryName,
                 ImageUrl = GetDishImageUrl(dish),
-                AllergensList = GetDishAllergensList(dish),
-                HasAllergens = (dish.DishAllergens?.Any() ?? false),
+                AllergensList = allergensList,
+                HasAllergens = !string.IsNullOrEmpty(allergensList),
                 IsAvailable = dish.TotalQuantity > 0
             };
         }
+
+        private string GetDishAllergensList(Dish dish)
+        {
+            if (dish.DishAllergens == null || !dish.DishAllergens.Any())
+                return "";
+
+            // Extrageți numele alergenilor
+            var allergenNames = dish.DishAllergens
+                .Where(da => da.Allergen != null)
+                .Select(da => da.Allergen.Name)
+                .ToList();
+
+            return string.Join(", ", allergenNames);
+        }
+
+
         private MenuItemViewModel CreateMenuViewModel(Menu menu)
         {
             System.Diagnostics.Debug.WriteLine($"Creating menu view model for: {menu.Name}");
@@ -282,6 +312,9 @@ namespace RestaurantApp.UI.ViewModels
             // Initialize price and portion quantity
             decimal menuPrice = 0;
             decimal totalPortionQuantity = 0;
+
+            // Lista pentru a păstra dish-urile din meniu
+            var menuItems = new List<MenuDishViewModel>();
 
             // Check if MenuDishes collection is loaded and contains items
             if (menu.MenuDishes != null && menu.MenuDishes.Any())
@@ -304,6 +337,17 @@ namespace RestaurantApp.UI.ViewModels
                         {
                             totalPortionQuantity += menuDish.Dish.PortionQuantity;
                         }
+
+                        // Adaugă dish-ul în lista de dish-uri din meniu
+                        menuItems.Add(new MenuDishViewModel
+                        {
+                            DishId = menuDish.DishId,
+                            DishName = menuDish.Dish.Name,
+                            Quantity = menuDish.QuantityInMenu > 0 ? menuDish.QuantityInMenu : menuDish.Dish.PortionQuantity,
+                            Unit = "g"
+                        });
+
+                        System.Diagnostics.Debug.WriteLine($"  Added menu dish: {menuDish.Dish.Name}, Quantity: {menuDish.QuantityInMenu}g");
                     }
                     else
                     {
@@ -340,6 +384,13 @@ namespace RestaurantApp.UI.ViewModels
             // Round the portion quantity to avoid excessive decimal places
             totalPortionQuantity = Math.Round(totalPortionQuantity);
 
+            // Debug informații despre lista de dish-uri
+            System.Diagnostics.Debug.WriteLine($"  Menu has {menuItems.Count} dishes");
+            foreach (var item in menuItems)
+            {
+                System.Diagnostics.Debug.WriteLine($"    Dish in menu: {item.DishName} - {item.Quantity}{item.Unit}");
+            }
+
             // Create and return the view model
             var viewModel = new MenuItemViewModel
             {
@@ -353,10 +404,11 @@ namespace RestaurantApp.UI.ViewModels
                 AllergensList = GetMenuAllergensList(menu),
                 HasAllergens = DoesMenuHaveAllergens(menu),
                 IsAvailable = IsMenuAvailable(menu),
-                IsMenu = true
+                IsMenu = true,
+                MenuItems = menuItems // Adăugăm lista de dish-uri
             };
 
-            System.Diagnostics.Debug.WriteLine($"  Created view model with price: {viewModel.Price}");
+            System.Diagnostics.Debug.WriteLine($"  Created view model with price: {viewModel.Price} and {viewModel.MenuItems.Count} dishes");
             return viewModel;
         }
 
@@ -369,16 +421,6 @@ namespace RestaurantApp.UI.ViewModels
                 return firstImage?.ImagePath ?? "/Images/default-dish.png";
             }
             return "/Images/default-dish.png";
-        }
-
-        private string GetDishAllergensList(Dish dish)
-        {
-            if (dish.DishAllergens == null || !dish.DishAllergens.Any())
-                return "";
-
-            return string.Join(", ", dish.DishAllergens
-                .Where(da => da.Allergen != null)
-                .Select(da => da.Allergen.Name));
         }
 
         private string GetMenuAllergensList(Menu menu)
@@ -476,6 +518,37 @@ namespace RestaurantApp.UI.ViewModels
                 }
             });
         }
+
+        private void ShowItemDetails(MenuItemViewModel item)
+        {
+            if (item == null)
+                return;
+
+            try
+            {
+                var viewModel = new ItemDetailsViewModel(
+                    item,
+                    _cartService,
+                    _userSessionService,
+                    _dialogService,
+                    _categoryService);
+
+                var dialog = new RestaurantApp.UI.Views.Dialogs.ItemDetailsDialog
+                {
+                    DataContext = viewModel,
+                    Owner = Application.Current.MainWindow,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Error showing item details: {ex.Message}";
+                _dialogService.ShowMessage(ErrorMessage, "Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
     }
 
     // View model classes for menu items
@@ -499,6 +572,8 @@ namespace RestaurantApp.UI.ViewModels
         public bool HasAllergens { get; set; }
         public bool IsAvailable { get; set; }
         public bool IsMenu { get; set; } // Indicates if this is a menu or dish
+        public string CategoryName { get; set; } // Make sure this property exists
+        public List<MenuDishViewModel> MenuItems { get; set; } = new List<MenuDishViewModel>();
     }
 
     public class DishItemViewModel : MenuItemViewModel
@@ -507,5 +582,13 @@ namespace RestaurantApp.UI.ViewModels
         {
             IsMenu = false; // This is a dish, not a menu
         }
+    }
+
+    public class MenuDishViewModel
+    {
+        public int DishId { get; set; }
+        public string DishName { get; set; }
+        public decimal Quantity { get; set; }
+        public string Unit { get; set; } = "g"; // Unitatea de măsură, probabil grame
     }
 }

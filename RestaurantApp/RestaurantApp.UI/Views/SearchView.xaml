@@ -103,6 +103,12 @@
                                 <StackPanel Grid.Column="2" MinWidth="100">
                                     <TextBlock Text="{Binding Price, StringFormat={}{0}RON}" FontWeight="Bold" 
                                               FontSize="16" HorizontalAlignment="Right"/>
+                                    <Button Content="ℹ️" 
+                                            Command="{Binding DataContext.ShowItemDetailsCommand, 
+                                                RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                            CommandParameter="{Binding}"
+                                            Margin="0,0,5,0" Padding="10,5" 
+                                            ToolTip="View Item Details"/>
                                     <Button Content="Add to Cart" 
                                            Command="{Binding DataContext.AddToCartCommand, 
                                                RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"

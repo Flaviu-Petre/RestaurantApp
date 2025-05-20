@@ -32,14 +32,14 @@ namespace RestaurantApp.Data.Repositories.Implementations
         {
             return await _context.Menus
                 .Include(m => m.Category)
-                .Include(m => m.MenuDishes)
-                    .ThenInclude(md => md.Dish)
-                        .ThenInclude(d => d.Images)
-                .Include(m => m.MenuDishes)
-                    .ThenInclude(md => md.Dish)
-                        .ThenInclude(d => d.DishAllergens)
-                            .ThenInclude(da => da.Allergen)
-                .FirstOrDefaultAsync(m => m.Id == id);
+                    .Include(m => m.MenuDishes)
+                        .ThenInclude(md => md.Dish)
+                            .ThenInclude(d => d.DishAllergens)
+                                .ThenInclude(da => da.Allergen)
+                    .Include(m => m.MenuDishes)
+                        .ThenInclude(md => md.Dish)
+                            .ThenInclude(d => d.Images)
+                    .FirstOrDefaultAsync(m => m.Id == id);
         }
 
         public async Task<IEnumerable<Menu>> SearchByNameAsync(string searchTerm)

@@ -12,6 +12,7 @@ namespace RestaurantApp.Core.Interfaces.Repositories
         Task<Dish> GetWithImagesAsync(int id);
         Task<Dish> GetWithMenusAsync(int id);
         Task<Dish> GetWithFullDetailsAsync(int id);
+        Task<IEnumerable<Dish>> GetAllWithFullDetailsAsync();
 
         // Search dishes
         Task<IEnumerable<Dish>> SearchByNameAsync(string searchTerm);

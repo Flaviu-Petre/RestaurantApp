@@ -55,6 +55,16 @@ namespace RestaurantApp.Data.Repositories.Implementations
                 .FirstOrDefaultAsync(d => d.Id == id);
         }
 
+        public async Task<IEnumerable<Dish>> GetAllWithFullDetailsAsync()
+        {
+            return await _context.Dishes
+                .Include(d => d.Category)
+                .Include(d => d.Images)
+                .Include(d => d.DishAllergens)
+                    .ThenInclude(da => da.Allergen)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Dish>> SearchByNameAsync(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))

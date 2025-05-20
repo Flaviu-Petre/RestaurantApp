@@ -1,4 +1,5 @@
 ﻿using RestaurantApp.Core.Models;
+using RestaurantApp.Core.Services.Implementations;
 using RestaurantApp.Core.Services.Interfaces;
 using RestaurantApp.UI.Infrastructure;
 using System;
@@ -19,6 +20,7 @@ namespace RestaurantApp.UI.ViewModels
         private readonly IUserSessionService _userSessionService;
         private readonly ICartService _cartService;
         private readonly IDialogService _dialogService;
+        private readonly ICategoryService _categoryService;
 
         public SearchViewModel(
             IDishService dishService,
@@ -26,7 +28,8 @@ namespace RestaurantApp.UI.ViewModels
             IAllergenService allergenService,
             IUserSessionService userSessionService,
             ICartService cartService,
-            IDialogService dialogService)
+            IDialogService dialogService,
+            ICategoryService categoryService)
         {
             _dishService = dishService;
             _menuService = menuService;
@@ -34,6 +37,7 @@ namespace RestaurantApp.UI.ViewModels
             _userSessionService = userSessionService;
             _cartService = cartService;
             _dialogService = dialogService;
+            _categoryService = categoryService;
 
             // Initialize search types
             SearchTypes = new List<string> { "By Name", "By Allergen" };
@@ -45,9 +49,11 @@ namespace RestaurantApp.UI.ViewModels
             ApplyAllergenFilterCommand = new AsyncRelayCommand(ApplyAllergenFilterAsync);
             ClearFiltersCommand = new AsyncRelayCommand(ClearFiltersAsync);
             AddToCartCommand = new RelayCommand<MenuItemViewModel>(AddToCart, item => item != null);
+            ShowItemDetailsCommand = new RelayCommand<MenuItemViewModel>(ShowItemDetails);
 
             // Load allergens and initialize selected allergen
             LoadAllergensAsync().ConfigureAwait(false);
+            _categoryService = categoryService;
         }
 
         #region Properties
@@ -113,6 +119,7 @@ namespace RestaurantApp.UI.ViewModels
         public ICommand ApplyAllergenFilterCommand { get; }
         public ICommand ClearFiltersCommand { get; }
         public ICommand AddToCartCommand { get; }
+        public ICommand ShowItemDetailsCommand { get; }
 
         #endregion
 
@@ -500,6 +507,36 @@ namespace RestaurantApp.UI.ViewModels
             });
         }
 
+        private void ShowItemDetails(MenuItemViewModel item)
+        {
+            if (item == null)
+                return;
+
+            try
+            {
+                var viewModel = new ItemDetailsViewModel(
+                    item,
+                    _cartService,
+                    _userSessionService,
+                    _dialogService,
+                    _categoryService);
+
+                var dialog = new RestaurantApp.UI.Views.Dialogs.ItemDetailsDialog
+                {
+                    DataContext = viewModel,
+                    Owner = Application.Current.MainWindow,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner
+                };
+
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = $"Error showing item details: {ex.Message}";
+                _dialogService.ShowMessage(ErrorMessage, "Error",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
         #endregion
     }
 
